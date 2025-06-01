@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高級音階練習器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align to top */
+            min-height: 100vh;
+            background-color: #f0f9ff; /* 淡藍色背景 */
+            color: #0f172a; /* 深藍灰色文字 */
+            padding: 20px;
+            overflow-y: auto; /* Allow scrolling if content overflows */
+        }
+        .container {
+            background-color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 0.75rem; /* 圓角 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            width: 100%;
+            max-width: 700px;
+        }
+        button, select {
+            background-color: #3b82f6; /* 藍色按鈕 */
+            color: white;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem; /* 圓角 */
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin: 0.25rem;
+        }
+        button:hover, select:hover {
+            background-color: #2563eb; /* 深一點的藍色 */
+        }
+        button:disabled, select:disabled {
+            background-color: #9ca3af; /* 灰色禁用狀態 */
+            cursor: not-allowed;
+        }
+        h1 {
+            font-size: 1.875rem; /* 標題字型大小 */
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1e3a8a; /* 深藍色標題 */
+        }
+        .control-group {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb; /* 淺灰色邊框 */
+            border-radius: 0.5rem;
+            background-color: #f9fafb; /* 非常淺的灰色背景 */
+        }
+        .control-group h2 {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: #1f2937; /* 深灰色標題 */
+        }
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            align-items: center;
+        }
+        label {
+            font-size: 0.875rem;
+            color: #374151; /* 較深的灰色文字 */
+            margin-right: 0.5rem;
+            display: block;
+            text-align: left;
+            margin-bottom: 0.25rem;
+        }
+        select, input[type="range"] {
+            width: 100%;
+            background-color: #fff;
+            color: #1f2937;
+            border: 1px solid #d1d5db; /* 灰色邊框 */
+        }
+        input[type="range"] {
+            padding: 0;
+        }
+        .lang-buttons button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        .voice-presets button {
+            background-color: #10b981; /* 綠色預設按鈕 */
+        }
+        .voice-presets button:hover {
+            background-color: #059669; /* 深一點的綠色 */
+        }
+        .recording-controls button#playAndRecordButton {
+            background-color: #ef4444; /* 紅色錄音按鈕 */
+        }
+        .recording-controls button#playAndRecordButton:hover {
+            background-color: #dc2626;
+        }
+        .recording-controls button#stopRecordButton {
+            background-color: #f97316; /* 橘色停止按鈕 */
+        }
+        .recording-controls button#stopRecordButton:hover {
+            background-color: #ea580c;
+        }
+        #audioPlayback {
+            margin-top: 1rem;
+        }
+        #downloadLinkContainer a {
+            display: inline-block;
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #10b981;
+            color: white;
+            border-radius: 0.5rem;
+            text-decoration: none;
+        }
+        #downloadLinkContainer a:hover {
+            background-color: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-buttons mb-4 flex justify-center space-x-2">
+            <button id="lang-en">English</button>
+            <button id="lang-zh-CN">简体中文</button>
+            <button id="lang-zh-TW">繁體中文</button>
+        </div>
+
+        <h1 id="app-title">Scale Trainer</h1>
+
+        <div class="control-group">
+            <h2 id="settings-title">Settings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label for="scale-type" id="label-scale-type">Scale Type:</label>
+                    <select id="scale-type"></select>
+                </div>
+                <div>
+                    <label for="root-note" id="label-root-note">Root Note:</label>
+                    <select id="root-note"></select>
+                </div>
+                <div>
+                    <label for="start-octave" id="label-start-octave">Starting Octave:</label>
+                    <select id="start-octave"></select>
+                </div>
+                <div>
+                    <label for="num-octaves" id="label-num-octaves">Range (Octaves):</label>
+                    <select id="num-octaves">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="play-direction" id="label-play-direction">Play Direction:</label>
+                    <select id="play-direction">
+                        <option value="asc" id="direction-asc">Ascending</option>
+                        <option value="desc" id="direction-desc">Descending</option>
+                        <option value="ascDesc" id="direction-ascDesc">Ascending & Descending</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group voice-presets">
+            <h2 id="voice-presets-title">Voice Presets:</h2>
+            <div class="control-grid">
+                <button id="preset-soprano">Soprano</button>
+                <button id="preset-alto">Alto</button>
+                <button id="preset-tenor">Tenor</button>
+                <button id="preset-bass">Bass</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2 id="speed-title">Speed:</h2>
+            <div class="control-grid items-center">
+                <div class="flex space-x-1">
+                    <button id="speed-slow">Slow</button>
+                    <button id="speed-medium">Medium</button>
+                    <button id="speed-fast">Fast</button>
+                </div>
+                <div class="flex-grow">
+                    <input type="range" id="speed-slider" min="0.2" max="1.5" step="0.05" value="0.6">
+                    <div class="text-xs text-gray-500"><span id="speed-value">0.6</span> s/note</div>
+                </div>
+            </div>
+        </div>
+
+        <button id="playScaleButton" class="w-full md:w-auto mt-4 py-3 px-6 text-lg">Play Scale</button>
+        <div id="status" class="mt-4 text-sm text-gray-600"></div>
+
+        <div class="control-group recording-controls mt-6">
+            <h2 id="play-record-title">Play Scale & Record Voice</h2>
+            <div class="flex justify-center space-x-2">
+                <button id="playAndRecordButton">Play Scale & Record</button>
+                <button id="stopRecordButton" style="display:none;">Stop Recording</button>
+            </div>
+            <div id="audioPlayback" class="mt-2"></div>
+            <div id="downloadLinkContainer" class="mt-2"></div>
+            <div id="record-status" class="mt-2 text-sm text-gray-500"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const OCTAVES = [2, 3, 4, 5];
+
+        const SCALES = {
+            major: { name: { en: 'Major', 'zh-CN': '自然大调', 'zh-TW': '自然大調' }, intervals: [0, 2, 4, 5, 7, 9, 11, 12] },
+            naturalMinor: { name: { en: 'Natural Minor', 'zh-CN': '自然小调', 'zh-TW': '自然小調' }, intervals: [0, 2, 3, 5, 7, 8, 10, 12] },
+            harmonicMinor: { name: { en: 'Harmonic Minor', 'zh-CN': '和声小调', 'zh-TW': '和聲小調' }, intervals: [0, 2, 3, 5, 7, 8, 11, 12] },
+            melodicMinor: {
+                name: { en: 'Melodic Minor', 'zh-CN': '旋律小调', 'zh-TW': '旋律小調' },
+                intervalsAsc: [0, 2, 3, 5, 7, 9, 11, 12],
+                intervalsDesc: [0, 2, 3, 5, 7, 8, 10, 12]
+            },
+            chromatic: { name: { en: 'Chromatic', 'zh-CN': '半音阶', 'zh-TW': '半音階' }, intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+            majorPentatonic: { name: { en: 'Major Pentatonic', 'zh-CN': '五声大调', 'zh-TW': '五聲大調' }, intervals: [0, 2, 4, 7, 9, 12] },
+            blues: { name: { en: 'Blues', 'zh-CN': '布鲁斯音阶', 'zh-TW': '布魯斯音階' }, intervals: [0, 3, 5, 6, 7, 10, 12] },
+        };
+
+        const VOICE_PRESETS = {
+            soprano: { name: { en: 'Soprano', 'zh-CN': '女高音', 'zh-TW': '女高音' }, rootNote: 'C', startOctave: 4, numOctaves: 2 },
+            alto: { name: { en: 'Alto', 'zh-CN': '女中音', 'zh-TW': '女中音' }, rootNote: 'G', startOctave: 3, numOctaves: 2 },
+            tenor: { name: { en: 'Tenor', 'zh-CN': '男高音', 'zh-TW': '男高音' }, rootNote: 'C', startOctave: 3, numOctaves: 2 },
+            bass: { name: { en: 'Bass', 'zh-CN': '男低音', 'zh-TW': '男低音' }, rootNote: 'E', startOctave: 2, numOctaves: 2 },
+        };
+
+        const UI_TEXT = {
+            en: {
+                'app-title': 'Advanced Scale Trainer',
+                'settings-title': 'Settings',
+                'label-scale-type': 'Scale Type:',
+                'label-root-note': 'Root Note:',
+                'label-start-octave': 'Starting Octave:',
+                'label-num-octaves': 'Range (Octaves):',
+                'label-play-direction': 'Play Direction:',
+                'direction-asc': 'Ascending',
+                'direction-desc': 'Descending',
+                'direction-ascDesc': 'Ascending & Descending',
+                'voice-presets-title': 'Voice Presets:',
+                'speed-title': 'Speed:',
+                'playScaleButton': 'Play Scale',
+                'status-playing': 'Playing...',
+                'status-done': 'Finished.',
+                'status-error-audio': 'Web Audio API not supported.',
+                'status-error-tone': 'Tone.js not loaded. Cannot play audio.',
+                'speed-slow': 'Slow', 'speed-medium': 'Medium', 'speed-fast': 'Fast',
+                'preset-soprano': 'Soprano', 'preset-alto': 'Alto', 'preset-tenor': 'Tenor', 'preset-bass': 'Bass',
+                'play-record-title': 'Play Scale & Record Voice',
+                'playAndRecordButton': 'Play Scale & Record',
+                'stopRecordButton': 'Stop Recording',
+                'record-status-waiting': 'Waiting for microphone permission...',
+                'record-status-permission-denied': 'Microphone permission denied. Please enable it in browser settings.',
+                'record-status-error': 'Recording error: ',
+                'record-status-recording': 'Recording voice...',
+                'record-status-playing-and-recording': 'Playing scale & recording voice...',
+                'record-status-processing': 'Processing audio (WAV)...',
+                'record-status-ready': 'Recording ready (WAV). Click to download.',
+                'download-link-text': 'Download WAV Recording',
+                'record-status-initializing': 'Initializing recording...',
+                'record-status-still-recording': ' (Still recording voice...)',
+                'record-status-wav-conversion-error': 'Failed to convert to WAV. Original format might be available.',
+            },
+            'zh-CN': {
+                'app-title': '高级音阶练习器',
+                'settings-title': '参数设置',
+                'label-scale-type': '音阶类型:', 'label-root-note': '根音:',
+                'label-start-octave': '起始八度:', 'label-num-octaves': '练习范围 (八度):',
+                'label-play-direction': '播放方向:',
+                'direction-asc': '上行', 'direction-desc': '下行', 'direction-ascDesc': '上行与下行',
+                'voice-presets-title': '声部预设:', 'speed-title': '速度:',
+                'playScaleButton': '播放音阶',
+                'status-playing': '正在播放...', 'status-done': '播放完毕。',
+                'status-error-audio': '您的浏览器不支持 Web Audio API。',
+                'status-error-tone': 'Tone.js 未能加载，无法播放声音。',
+                'speed-slow': '慢速', 'speed-medium': '中速', 'speed-fast': '快速',
+                'preset-soprano': '女高音', 'preset-alto': '女中音', 'preset-tenor': '男高音', 'preset-bass': '男低音',
+                'play-record-title': '播放音阶并录音',
+                'playAndRecordButton': '播放音阶并录音',
+                'stopRecordButton': '停止录音',
+                'record-status-waiting': '等待麦克风权限...',
+                'record-status-permission-denied': '麦克风权限被拒绝。请在浏览器设置中启用。',
+                'record-status-error': '录音错误: ',
+                'record-status-recording': '录音中...',
+                'record-status-playing-and-recording': '正在播放音阶并录音...',
+                'record-status-processing': '正在处理音频 (WAV)...',
+                'record-status-ready': '录音已就绪 (WAV)。点击下载。',
+                'download-link-text': '下载 WAV 录音',
+                'record-status-initializing': '正在初始化录音...',
+                'record-status-still-recording': ' (仍在录音...)',
+                'record-status-wav-conversion-error': '转换为 WAV 失败。原始格式可能可用。',
+            },
+            'zh-TW': {
+                'app-title': '高級音階練習器',
+                'settings-title': '參數設定',
+                'label-scale-type': '音階類型:', 'label-root-note': '根音:',
+                'label-start-octave': '起始八度:', 'label-num-octaves': '練習範圍 (八度):',
+                'label-play-direction': '播放方向:',
+                'direction-asc': '上行', 'direction-desc': '下行', 'direction-ascDesc': '上行與下行',
+                'voice-presets-title': '聲部預設:', 'speed-title': '速度:',
+                'playScaleButton': '播放音階',
+                'status-playing': '正在播放...', 'status-done': '播放完畢。',
+                'status-error-audio': '您的瀏覽器不支援 Web Audio API。',
+                'status-error-tone': 'Tone.js 未能載入，無法播放聲音。',
+                'speed-slow': '慢速', 'speed-medium': '中速', 'speed-fast': '快速',
+                'preset-soprano': '女高音', 'preset-alto': '女中音', 'preset-tenor': '男高音', 'preset-bass': '男低音',
+                'play-record-title': '播放音階並錄音',
+                'playAndRecordButton': '播放音階並錄音',
+                'stopRecordButton': '停止錄音',
+                'record-status-waiting': '等待麥克風權限...',
+                'record-status-permission-denied': '麥克風權限被拒絕。請在瀏覽器設定中啟用。',
+                'record-status-error': '錄音錯誤: ',
+                'record-status-recording': '錄音中...',
+                'record-status-playing-and-recording': '正在播放音階並錄音...',
+                'record-status-processing': '正在處理音訊 (WAV)...',
+                'record-status-ready': '錄音已就緒 (WAV)。點擊下載。',
+                'download-link-text': '下載 WAV 錄音',
+                'record-status-initializing': '正在初始化錄音...',
+                'record-status-still-recording': ' (仍在錄音...)',
+                'record-status-wav-conversion-error': '轉換為 WAV 失敗。原始格式可能可用。',
+            }
+        };
+        let currentLang = 'zh-TW';
+
+        // --- Elements ---
+        const scaleTypeSelect = document.getElementById('scale-type');
+        const rootNoteSelect = document.getElementById('root-note');
+        const startOctaveSelect = document.getElementById('start-octave');
+        const numOctavesSelect = document.getElementById('num-octaves');
+        const playDirectionSelect = document.getElementById('play-direction');
+        const playScaleOnlyButton = document.getElementById('playScaleButton');
+        const statusDiv = document.getElementById('status');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValueSpan = document.getElementById('speed-value');
+
+        const playAndRecordButton = document.getElementById('playAndRecordButton');
+        const stopRecordButton = document.getElementById('stopRecordButton');
+        const audioPlayback = document.getElementById('audioPlayback');
+        const downloadLinkContainer = document.getElementById('downloadLinkContainer');
+        const recordStatusDiv = document.getElementById('record-status');
+
+        let synth, filter, filterEnvelope; // Declare them here to be accessible
+        try {
+            if (typeof Tone !== 'undefined') {
+                // --- 音色修改開始 (小號 v2) ---
+                // 濾波器包絡線
+                filterEnvelope = new Tone.FrequencyEnvelope({
+                    attack: 0.06,       // 濾波器起音稍慢，讓音色逐漸打開
+                    decay: 0.3,
+                    sustain: 0.4,       // 濾波器保持開啟的程度
+                    release: 0.5,
+                    baseFrequency: 500, // 濾波器起始截止頻率 (較低)
+                    octaves: 2.5,       // 截止頻率掃描的八度範圍 (例如從 500Hz 到約 2800Hz)
+                    exponent: 2
+                });
+
+                // 濾波器
+                filter = new Tone.Filter({
+                    type: 'lowpass',    // 低通濾波器
+                    frequency: 100,     // 初始截止頻率 (會被包絡線的 baseFrequency 覆蓋)
+                    Q: 1.5              // 適中的共振峰，增加一點金屬感
+                }).toDestination(); // 連接到最終輸出
+
+                // 連接濾波器包絡線到濾波器的頻率參數
+                filterEnvelope.connect(filter.frequency);
+
+                // FM 合成器
+                synth = new Tone.FMSynth({
+                    harmonicity: 1.0,       // 諧波關係，1.0 表示泛音為基頻的整數倍
+                    modulationIndex: 10,    // 調變深度，影響音色的明亮度和金屬感
+                    oscillator: {
+                        type: "sawtooth"    // 載波振盪器：鋸齒波，提供豐富的諧波
+                    },
+                    envelope: {             // 主音量包絡線
+                        attack: 0.04,       // 較快的起音
+                        decay: 0.4,         // 較長的衰減，模擬吹奏樂器的延音
+                        sustain: 0.6,       // 持續音量
+                        release: 0.3        // 釋放時間
+                    },
+                    modulation: {
+                        type: "triangle"    // 調變波：三角波，比方波或鋸齒波柔和一些
+                    },
+                    modulationEnvelope: {   // 調變深度包絡線
+                        attack: 0.03,       // 調變起音
+                        decay: 0.2,
+                        sustain: 0.5,       // 保持一定的調變深度，維持音色的金屬感
+                        release: 0.4
+                    },
+                    volume: -6              // 音量調整
+                }).connect(filter); // 合成器輸出連接到濾波器
+                // --- 音色修改結束 ---
+
+            } else { throw new Error("Tone.js not loaded"); }
+        } catch (e) {
+            console.error(e);
+            if(statusDiv) statusDiv.textContent = UI_TEXT[currentLang]['status-error-tone'] || "Tone.js failed to load.";
+            if(playScaleOnlyButton) playScaleOnlyButton.disabled = true;
+            if(playAndRecordButton) playAndRecordButton.disabled = true;
+        }
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioStream;
+        let isPlayAndRecordingActive = false;
+
+        function audioBufferToWav(buffer) {
+            const numOfChan = buffer.numberOfChannels;
+            const L = buffer.length * numOfChan * 2 + 44;
+            const wavBuffer = new ArrayBuffer(L);
+            const view = new DataView(wavBuffer);
+            let pos = 0;
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, pos, 'RIFF'); pos += 4;
+            view.setUint32(pos, L - 8, true); pos += 4;
+            writeString(view, pos, 'WAVE'); pos += 4;
+            writeString(view, pos, 'fmt '); pos += 4;
+            view.setUint32(pos, 16, true); pos += 4;
+            view.setUint16(pos, 1, true); pos += 2;
+            view.setUint16(pos, numOfChan, true); pos += 2;
+            view.setUint32(pos, buffer.sampleRate, true); pos += 4;
+            view.setUint32(pos, buffer.sampleRate * numOfChan * 2, true); pos += 4;
+            view.setUint16(pos, numOfChan * 2, true); pos += 2;
+            view.setUint16(pos, 16, true); pos += 2;
+            writeString(view, pos, 'data'); pos += 4;
+            view.setUint32(pos, buffer.length * numOfChan * 2, true); pos += 4;
+
+            const channels = [];
+            for (let i = 0; i < numOfChan; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            for (let i = 0; i < buffer.length; i++) {
+                for (let ch = 0; ch < numOfChan; ch++) {
+                    let sample = Math.max(-1, Math.min(1, channels[ch][i]));
+                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+            }
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+
+        async function initAudioRecording() {
+            recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-waiting'];
+            downloadLinkContainer.innerHTML = '';
+            audioPlayback.innerHTML = '';
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                recordStatusDiv.textContent = UI_TEXT[currentLang]['status-error-audio'];
+                console.error("getUserMedia not supported on your browser!");
+                playAndRecordButton.disabled = true;
+                return false;
+            }
+
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true }
+                });
+                mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-processing'];
+                    
+                    const originalAudioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm;codecs=opus' });
+                    audioChunks = [];
+
+                    try {
+                        const arrayBuffer = await originalAudioBlob.arrayBuffer();
+                        if (!Tone.context || Tone.context.state === 'suspended') {
+                            await Tone.start();
+                        }
+                        const audioBuffer = await Tone.context.decodeAudioData(arrayBuffer);
+                        const wavBlob = audioBufferToWav(audioBuffer);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+
+                        const audioElement = document.createElement('audio');
+                        audioElement.controls = true;
+                        audioElement.src = audioUrl;
+                        audioPlayback.innerHTML = '';
+                        audioPlayback.appendChild(audioElement);
+
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = audioUrl;
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                        downloadLink.download = `scale_voice_recording_${timestamp}.wav`;
+                        downloadLink.textContent = UI_TEXT[currentLang]['download-link-text'];
+                        downloadLinkContainer.innerHTML = '';
+                        downloadLinkContainer.appendChild(downloadLink);
+
+                        recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-ready'];
+                    } catch (conversionError) {
+                        console.error("Error converting to WAV:", conversionError);
+                        recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-wav-conversion-error'];
+                        const fallbackUrl = URL.createObjectURL(originalAudioBlob);
+                        const fallbackLink = document.createElement('a');
+                        fallbackLink.href = fallbackUrl;
+                        fallbackLink.download = `scale_voice_recording_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+                        fallbackLink.textContent = `Download Original WebM`;
+                        fallbackLink.className = "mt-2 text-sm text-blue-500 underline";
+                        downloadLinkContainer.appendChild(fallbackLink);
+
+                    }
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error('MediaRecorder error:', event.error);
+                    recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-error'] + event.error.name;
+                    stopCombinedPlayAndRecord(true);
+                };
+                return true;
+
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                    recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-permission-denied'];
+                } else {
+                    recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-error'] + err.message;
+                }
+                playAndRecordButton.disabled = false;
+                playScaleOnlyButton.disabled = false;
+                stopRecordButton.style.display = 'none';
+                isPlayAndRecordingActive = false;
+                return false;
+            }
+        }
+
+        async function startPlayAndRecord() {
+            isPlayAndRecordingActive = true;
+            playScaleOnlyButton.disabled = true;
+            playAndRecordButton.disabled = true;
+            stopRecordButton.style.display = 'inline-block';
+            recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-initializing'];
+
+            const initialized = await initAudioRecording();
+            if (!initialized) {
+                isPlayAndRecordingActive = false;
+                playScaleOnlyButton.disabled = false;
+                playAndRecordButton.disabled = false;
+                stopRecordButton.style.display = 'none';
+                return;
+            }
+
+            if (mediaRecorder) {
+                audioChunks = [];
+                mediaRecorder.start();
+                recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-playing-and-recording'];
+                await playScale(true);
+            } else {
+                recordStatusDiv.textContent = UI_TEXT[currentLang]['record-status-error'] + "MediaRecorder not available.";
+                stopCombinedPlayAndRecord(true);
+            }
+        }
+        
+        function stopCombinedPlayAndRecord(errorOccurred = false) {
+            isPlayAndRecordingActive = false;
+
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+
+            if (typeof Tone !== 'undefined' && Tone.Transport) {
+                Tone.Transport.stop();
+                Tone.Transport.cancel();
+            }
+            if (synth) {
+                synth.releaseAll();
+            }
+            // Stop filter envelope as well if it's active
+            if (filterEnvelope && typeof filterEnvelope.triggerRelease === 'function') {
+                // filterEnvelope.triggerRelease(Tone.now()); // Or simply let it run its course if tied to synth's release
+            }
+
+
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+
+            playScaleOnlyButton.disabled = false;
+            playAndRecordButton.disabled = false;
+            stopRecordButton.style.display = 'none';
+
+            if (!errorOccurred && mediaRecorder && mediaRecorder.state === "inactive") {
+                // onstop handles "ready" or "processing"
+            } else if (!errorOccurred) {
+                 if (!recordStatusDiv.textContent.includes(UI_TEXT[currentLang]['record-status-ready'].substring(0,5)) &&
+                     !recordStatusDiv.textContent.includes(UI_TEXT[currentLang]['record-status-processing'].substring(0,5))) {
+                    recordStatusDiv.textContent = "";
+                 }
+            }
+            statusDiv.textContent = "";
+        }
+
+        function populateDropdowns() {
+            for (const key in SCALES) {
+                const option = document.createElement('option');
+                option.value = key;
+                scaleTypeSelect.appendChild(option);
+            }
+            NOTE_NAMES.forEach(note => {
+                const option = document.createElement('option');
+                option.value = note; option.textContent = note;
+                rootNoteSelect.appendChild(option);
+            });
+            rootNoteSelect.value = 'C';
+            OCTAVES.forEach(octave => {
+                const option = document.createElement('option');
+                option.value = octave; option.textContent = octave;
+                startOctaveSelect.appendChild(option);
+            });
+            startOctaveSelect.value = 4;
+        }
+
+        function updateUIForLanguage() {
+            document.documentElement.lang = currentLang.startsWith('zh') ? currentLang : 'en';
+
+            document.querySelectorAll('[id]').forEach(el => {
+                const textKey = el.id;
+                if (UI_TEXT[currentLang][textKey]) {
+                    if (el.tagName === 'BUTTON' || (el.tagName === 'INPUT' && el.type === 'submit') || el.tagName === 'OPTION') {
+                        el.textContent = UI_TEXT[currentLang][textKey];
+                    } else if (el.tagName === 'LABEL' || el.tagName === 'H1' || el.tagName === 'H2' || (el.tagName === 'SPAN' && el.id === 'speed-value')) {
+                        if (el.id === 'speed-value') { /* Keep numeric value */ }
+                        else { el.textContent = UI_TEXT[currentLang][textKey]; }
+                    } else {
+                        el.textContent = UI_TEXT[currentLang][textKey];
+                    }
+                }
+            });
+
+            Array.from(scaleTypeSelect.options).forEach(option => {
+                const scaleKey = option.value;
+                if (SCALES[scaleKey]) {
+                    option.textContent = SCALES[scaleKey].name[currentLang] || SCALES[scaleKey].name['en'];
+                }
+            });
+            for (const presetKey in VOICE_PRESETS) {
+                const button = document.getElementById(`preset-${presetKey}`);
+                if (button) button.textContent = VOICE_PRESETS[presetKey].name[currentLang] || VOICE_PRESETS[presetKey].name['en'];
+            }
+
+            const currentStatusText = statusDiv.textContent.trim();
+            let isStandardMessage = false;
+            for (const langKey in UI_TEXT) {
+                for (const msgKey in UI_TEXT[langKey]) {
+                    if (UI_TEXT[langKey][msgKey] === currentStatusText && UI_TEXT[currentLang][msgKey]) {
+                        statusDiv.textContent = UI_TEXT[currentLang][msgKey];
+                        isStandardMessage = true;
+                        break;
+                    }
+                }
+                if(isStandardMessage) break;
+            }
+            const currentRecordStatusText = recordStatusDiv.textContent.trim();
+            let isRecordStandardMessage = false;
+            for (const langKey in UI_TEXT) {
+                for (const msgKey in UI_TEXT[langKey]) {
+                     if (msgKey.startsWith('record-status-') && UI_TEXT[langKey][msgKey] === currentRecordStatusText && UI_TEXT[currentLang][msgKey]) {
+                        recordStatusDiv.textContent = UI_TEXT[currentLang][msgKey];
+                        isRecordStandardMessage = true;
+                        break;
+                    }
+                }
+                if(isRecordStandardMessage) break;
+            }
+            const downloadLink = downloadLinkContainer.querySelector('a');
+            if (downloadLink && downloadLink.download.endsWith('.wav')) {
+                downloadLink.textContent = UI_TEXT[currentLang]['download-link-text'];
+            }
+        }
+
+        function getNoteFullName(noteName, octave) { return `${noteName}${octave}`; }
+
+        function generateSingleScalePart(rootNote, startOctave, numOctaves, intervals) {
+            const rootNoteIndex = NOTE_NAMES.indexOf(rootNote);
+            let sequence = [];
+            let currentOctave = parseInt(startOctave);
+
+            for (let o = 0; o < numOctaves; o++) {
+                for (let i = 0; i < intervals.length -1; i++) {
+                    const semitoneOffset = intervals[i];
+                    const absoluteNoteIndex = rootNoteIndex + semitoneOffset;
+                    const noteName = NOTE_NAMES[absoluteNoteIndex % 12];
+                    const octaveOffsetBasedOnRoot = Math.floor(absoluteNoteIndex / 12);
+                    sequence.push(getNoteFullName(noteName, currentOctave + octaveOffsetBasedOnRoot));
+                }
+                currentOctave++;
+            }
+            const finalRootAbsoluteIndex = rootNoteIndex + intervals[intervals.length-1];
+            const finalNoteName = NOTE_NAMES[finalRootAbsoluteIndex % 12];
+            const finalOctaveOffsetBasedOnRoot = Math.floor(finalRootAbsoluteIndex / 12);
+            sequence.push(getNoteFullName(finalNoteName, parseInt(startOctave) + (numOctaves - 1) + finalOctaveOffsetBasedOnRoot ));
+            return sequence;
+        }
+
+        function generateScaleSequence(rootNote, startOctave, numOctaves, scaleKey, direction) {
+            const scaleData = SCALES[scaleKey];
+            if (!scaleData) return [];
+
+            let ascendingNotes;
+            const ascIntervals = scaleData.intervalsAsc || scaleData.intervals;
+            ascendingNotes = generateSingleScalePart(rootNote, startOctave, numOctaves, ascIntervals);
+
+            if (direction === 'asc') {
+                return ascendingNotes;
+            }
+
+            let descendingNotes;
+            if (scaleKey === 'melodicMinor') {
+                descendingNotes = generateSingleScalePart(rootNote, startOctave, numOctaves, SCALES.naturalMinor.intervals).slice().reverse();
+            } else {
+                descendingNotes = ascendingNotes.slice().reverse();
+            }
+
+            if (direction === 'desc') {
+                return descendingNotes;
+            }
+
+            if (direction === 'ascDesc') {
+                return ascendingNotes.concat(descendingNotes.slice(1));
+            }
+            return ascendingNotes;
+        }
+
+        async function playScale(isCalledFromRecord = false) {
+            if (!synth || !filterEnvelope) { // Check for filterEnvelope as well
+                statusDiv.textContent = UI_TEXT[currentLang]['status-error-tone'];
+                if (isCalledFromRecord) stopCombinedPlayAndRecord(true);
+                return;
+            }
+            if (Tone.context.state === 'suspended') {
+                await Tone.start();
+            }
+
+            if (!isCalledFromRecord) {
+                playScaleOnlyButton.disabled = true;
+            }
+            statusDiv.textContent = UI_TEXT[currentLang]['status-playing'];
+
+            const selectedRootNote = rootNoteSelect.value;
+            const selectedStartOctave = parseInt(startOctaveSelect.value);
+            const selectedNumOctaves = parseInt(numOctavesSelect.value);
+            const selectedScaleKey = scaleTypeSelect.value;
+            const selectedDirection = playDirectionSelect.value;
+            const noteDuration = parseFloat(speedSlider.value);
+            const gapBetweenNotes = noteDuration * 0.15; // Keep a small gap for articulation
+
+            const notesToPlay = generateScaleSequence(selectedRootNote, selectedStartOctave, selectedNumOctaves, selectedScaleKey, selectedDirection);
+
+            if (notesToPlay.length === 0) {
+                statusDiv.textContent = "Error generating scale.";
+                if (!isCalledFromRecord) playScaleOnlyButton.disabled = false;
+                else stopCombinedPlayAndRecord(true);
+                return;
+            }
+
+            if (typeof Tone !== 'undefined' && Tone.Transport) {
+                Tone.Transport.cancel(); // Clear previous transport events
+            }
+
+            notesToPlay.forEach((note, index) => {
+                Tone.Transport.scheduleOnce((time) => {
+                    // Trigger synth and filter envelope for each note
+                    synth.triggerAttackRelease(note, noteDuration - gapBetweenNotes, time);
+                    filterEnvelope.triggerAttackRelease(noteDuration - gapBetweenNotes, time);
+                }, index * noteDuration); // Schedule notes sequentially
+            });
+
+            const totalDuration = notesToPlay.length * noteDuration;
+
+            Tone.Transport.scheduleOnce((time) => {
+                if (!isPlayAndRecordingActive) {
+                    if (!isCalledFromRecord) playScaleOnlyButton.disabled = false;
+                    statusDiv.textContent = UI_TEXT[currentLang]['status-done'];
+                } else {
+                    statusDiv.textContent = (UI_TEXT[currentLang]['status-done'] || 'Finished.') + (UI_TEXT[currentLang]['record-status-still-recording'] || ' (Still recording voice...)');
+                }
+            }, totalDuration);
+
+            Tone.Transport.start(Tone.now() + 0.05); // Start the transport
+        }
+
+        function setSpeed(value) {
+            speedSlider.value = value;
+            speedValueSpan.textContent = parseFloat(value).toFixed(2);
+        }
+
+        function applyVoicePreset(presetKey) {
+            const preset = VOICE_PRESETS[presetKey];
+            if (preset) {
+                rootNoteSelect.value = preset.rootNote;
+                startOctaveSelect.value = preset.startOctave;
+                numOctavesSelect.value = preset.numOctaves;
+            }
+        }
+
+        playScaleOnlyButton.addEventListener('click', () => playScale(false));
+        playAndRecordButton.addEventListener('click', startPlayAndRecord);
+        stopRecordButton.addEventListener('click', () => stopCombinedPlayAndRecord(false));
+
+        ['lang-en', 'lang-zh-CN', 'lang-zh-TW'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                currentLang = e.target.id.substring(5) || 'en';
+                if (e.target.id === 'lang-zh-CN') currentLang = 'zh-CN';
+                if (e.target.id === 'lang-zh-TW') currentLang = 'zh-TW';
+                updateUIForLanguage();
+            });
+        });
+
+        ['speed-slow', 'speed-medium', 'speed-fast'].forEach(id => {
+            const speeds = {'speed-slow': 1.0, 'speed-medium': 0.6, 'speed-fast': 0.3};
+            document.getElementById(id).addEventListener('click', () => setSpeed(speeds[id]));
+        });
+        speedSlider.addEventListener('input', (e) => speedValueSpan.textContent = parseFloat(e.target.value).toFixed(2));
+
+        Object.keys(VOICE_PRESETS).forEach(key => {
+            document.getElementById(`preset-${key}`).addEventListener('click', () => applyVoicePreset(key));
+        });
+
+        window.onload = () => {
+            populateDropdowns();
+            updateUIForLanguage();
+            setSpeed(0.6);
+            if (!synth) {
+                 if(statusDiv) statusDiv.textContent = UI_TEXT[currentLang]['status-error-tone'];
+                 if(playScaleOnlyButton) playScaleOnlyButton.disabled = true;
+                 if(playAndRecordButton) playAndRecordButton.disabled = true;
+            }
+            if (!window.MediaRecorder) {
+                if(recordStatusDiv) recordStatusDiv.textContent = UI_TEXT[currentLang]['status-error-audio'];
+                if(playAndRecordButton) playAndRecordButton.disabled = true;
+            }
+        };
+    </script>
+</body>
+</html>
